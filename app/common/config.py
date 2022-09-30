@@ -1,3 +1,5 @@
+from dataclasses import dataclass, asdict
+from os import environ
 import json
 from pathlib import Path
 from typing import Optional
@@ -20,7 +22,3 @@ def get_secret(
             return default_value
         raise EnvironmentError(f"Set the {key} environment variable.")
 
-
-if __name__ == "__main__":
-    world = get_secret("hello")
-    print(world)

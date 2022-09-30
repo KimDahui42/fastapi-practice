@@ -82,12 +82,13 @@ def getData():
         '서울대학교 창업지원단':'https://startup.snu.ac.kr/front/lounge/notice',#서울대학교 창업지원단
         '연세대학교 창업지원단':'https://venture.yonsei.ac.kr/notice',#연세대학교 창업지원단
     }
-    crawled_data={}
-    crawled_data['Kstartup']=KStartUp(date,urls)
-    crawled_data['기업마당']=BizInfo(date,urls)
-    crawled_data['SMtech']=SMtech(date,urls)
-    crawled_data['iitp']=Iitp(date,urls)
-    return toJson(crawled_data,date)
+    crawled_values={}
+    crawled_values['Kstartup']=KStartUp(date,urls)
+    crawled_values['기업마당']=BizInfo(date,urls)
+    crawled_values['SMtech']=SMtech(date,urls)
+    crawled_values['iitp']=Iitp(date,urls)
+    return crawled_values
+    #return toJson(crawled_data,date)
 
 
 # kstartup 크롤링 함수

@@ -1,55 +1,70 @@
-from fastapi import Depends, FastAPI, HTTPException
-from sqlalchemy.orm import Session
-from app.database.connectPostgre import SessionLocal, Base, engine
-from app.models.crawledData import CrawledData
+from dataclasses import dataclass
+from fastapi import Request, FastAPI
+from pathlib import Path
+from app.database.connectPostgre import db
+from app.database.models import CrawledData
 from apscheduler.schedulers.background import BackgroundScheduler
+from app.crawling.crawler import getData
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 app = FastAPI()
-
-
+db.init_app(app)
 # Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @app.get("/")
-def root():
-    return {"message": "Hello World!"}
+def root(request: Request):
+    data = next(db.get_db())
+    context = data.query(CrawledData).all()
+    return {"context" : context}
 
-
+@app.get("/crawl")
+def crawlData():
+    database = next(db.get_db())
+    data = getData()
+    for key in data:
+        for item in data[key]:
+            current = CrawledData(
+                title=item["title"],
+                agency=item["agency"],
+                contact=item["contact"],
+                event_date=item["event_date"],
+                crawled_date=item["upload_date"],
+                source=key
+            )
+            database.add(current)
+            database.commit()
+    return {"message":"saved"}
+            
 # 크롤링 관련
 sched = BackgroundScheduler(timezone="Asia/Seoul")
 
 
-@app.on_event("startup")
-def on_app_start():
-    """
-    before app starts
-    """
-    Base.metadata.create_all(bind=engine)
-
-
-'''@app.on_event("shutdown")
-async def on_app_shutdown():
-    """
-    after app shutdown
-    """
-    await mongodb.close()'''
-
-
 # 매일 스케줄러 작동, 크롤러 실행\
-@sched.scheduled_job("cron", hour="1", minute="30", id="remove_inactive_image")
+@sched.scheduled_job("cron", hour="16", minute="41", id="crawl_data")
 def job():
-    db = next(get_db())
-    inactive_image_list = db.query(Image).filter(Image.state == "INACTIVE").all()
-    for image in inactive_image_list:
-        db.delete(image)
+    database = next(db.get_db())
+    data = getData()
+    for key in data:
+        for item in data[key]:
+            current = CrawledData(
+                title=item["title"],
+                agency=item["agency"],
+                contact=item["contact"],
+                event_date=item["event_date"],
+                crawled_date=item["upload_date"],
+                source=key
+            )
+            database.add(current)
+            database.commit()
 
 
-def start_image_scheduler():
+@app.on_event("startup")
+def startup_crawler_scheduler():
     sched.start()
+
+
+@app.on_event("shutdown")
+def close_crawler_scheduler():
+    sched.shutdown()
